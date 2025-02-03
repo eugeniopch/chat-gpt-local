@@ -112,7 +112,7 @@
         }
       }
 
-      small{
+      small {
         font-size: 10px;
         color: #555;
         position: fixed;
@@ -122,13 +122,12 @@
         margin: auto;
         width: 400px;
       }
-
     </style>
 
     <script type="module">
       //module pemite utilizar import, export
       //este import se encuentra en el Github de WebLLM, dónde podés elegir el modelo que querés utilizar
-      import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
+      import { CreateWebWorkerMLCEngine } from "https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.46/+esm";
 
       //manera de abreviar el document.querySelector
       const $ = (el) => document.querySelector(el);
@@ -140,26 +139,27 @@
       const $messages = $("ul");
       const $container = $("main");
       const $button = $("button");
-      const $info = $('small')
+      const $info = $("small");
 
-      let messages = []
+      let messages = [];
 
       //Aquí se ingresa el id del modelo de ia a utilizar
-      const SELECTED_MODEL = 'gemma-2-2b-it-q4f16_1-MLC-1k'
+      const SELECTED_MODEL = "Llama-3-8B-Instruct-q4f32_1-MLC-1k";
 
-      const engine = await CreateMLCEngine(
+      const engine = await CreateWebWorkerMLCEngine(
+        new Worker("/worker.js", { type: "module" }),
         SELECTED_MODEL,
         {
-            initProgressCallback: (info) => {  
-                //el text corresponde a la respuesta que nos trae el modelo
-                 $info.textContent = `${info.text}%`
-                 //no se permite enviar texto hasta que se cargue al 100%
-                 if (info.progress === 1) {
-                    $button.removeAttribute('disabled')
-                 }
+          initProgressCallback: (info) => {
+            //el text corresponde a la respuesta que nos trae el modelo
+            $info.textContent = `${info.text}%`;
+            //no se permite enviar texto hasta que se cargue al 100%
+            if (info.progress === 1) {
+              $button.removeAttribute("disabled");
             }
+          },
         }
-      )
+      );
 
       $form.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -170,62 +170,61 @@
           $input.value = "";
         }
 
-        addMessage(messageText, 'user')
+        addMessage(messageText, "user");
 
         const userMessage = {
-            role: 'user',
-            content: messageText
-        }
+          role: "user",
+          content: messageText,
+        };
 
         //guardamos en el array de mensajes los mensajes de los usuarios
-        messages.push(userMessage)
+        messages.push(userMessage);
 
         //obtenemos la respuesta del llm
         const chunks = await engine.chat.completions.create({
-            messages,
-            stream: true
-        })
+          messages,
+          stream: true,
+        });
 
-        let reply = ""
+        let reply = "";
 
-        const $botMessage = addMessage("", 'bot')
+        const $botMessage = addMessage("", "bot");
 
         for await (const chunk of chunks) {
-            const [choice] = chunk.choices
-            //equivalente a hacer const choice = chunk.choices[0]
-            const content = choice?.delta?.content ?? ""
-            reply += content
-            $botMessage.textContent = reply
+          const [choice] = chunk.choices;
+          //equivalente a hacer const choice = chunk.choices[0]
+          const content = choice?.delta?.content ?? "";
+          reply += content;
+          $botMessage.textContent = reply;
         }
 
-        $button.removeAttribute('disabled')
+        $button.removeAttribute("disabled");
         //guardamos la respuesta del bot en el array de messages
         messages.push({
-            role: 'assistant',
-            content: reply
-        })
-        $container.scrollTop = $container.scrollHeight
+          role: "assistant",
+          content: reply,
+        });
+        $container.scrollTop = $container.scrollHeight;
       });
 
-      function addMessage(text, sender){
+      function addMessage(text, sender) {
         //clonar el template
-        const clonedTemplate = $template.content.cloneNode(true)
-        const $newMessage = clonedTemplate.querySelector('.message')
+        const clonedTemplate = $template.content.cloneNode(true);
+        const $newMessage = clonedTemplate.querySelector(".message");
 
-        const $who = $newMessage.querySelector('span')
-        const $text = $newMessage.querySelector('p')
+        const $who = $newMessage.querySelector("span");
+        const $text = $newMessage.querySelector("p");
 
-        $text.textContent = text
-        $who.textContent = sender === 'bot' ? 'GPT' : 'Vos'
-        $newMessage.classList.add(sender)
+        $text.textContent = text;
+        $who.textContent = sender === "bot" ? "GPT" : "Vos";
+        $newMessage.classList.add(sender);
 
-        $messages.appendChild($newMessage)
-        
-        $container.scrollTop = $container.scrollHeight
+        $messages.appendChild($newMessage);
 
-        return $text
+        $container.scrollTop = $container.scrollHeight;
+
+        return $text;
       }
-
     </script>
   </head>
   <body>
